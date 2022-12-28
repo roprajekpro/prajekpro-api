@@ -1,0 +1,114 @@
+{
+  "serviceId" : 1,
+  "proId" : 1,
+  "date": "2021-02-18",
+  "timeSlots": [
+    {
+      "id": 1,
+      "value": "10:00 AM",
+      "enabled": true
+    },
+    {
+      "id": 2,
+      "value": "10:30 AM",
+      "enabled": false
+    },
+    {
+      "id": 3,
+      "value": "11:00 AM",
+      "enabled": true
+    },
+    {
+      "id": 4,
+      "value": "11:30 AM",
+      "enabled": true
+    },
+    {
+      "id": 5,
+      "value": "12 NOON",
+      "enabled": false
+    },
+    {
+      "id": 6,
+      "value": "12:30 PM",
+      "enabled": true
+    },
+    {
+      "id": 7,
+      "value": "1 PM",
+      "enabled": true
+    },
+    {
+      "id": 8,
+      "value": "1:30 PM",
+      "enabled": true
+    },
+    {
+      "id": 9,
+      "value": "2 PM",
+      "enabled": false
+    },
+    {
+      "id": 10,
+      "value": "2:30 PM",
+      "enabled": true
+    },
+    {
+      "id": 11,
+      "value": "3 PM",
+      "enabled": true
+    },
+    {
+      "id": 12,
+      "value": "3:30 PM",
+      "enabled": false
+    },
+    {
+      "id": 13,
+      "value": "4 PM",
+      "enabled": true
+    },
+    {
+      "id": 14,
+      "value": "4:30 PM",
+      "enabled": true
+    },
+    {
+      "id": 15,
+      "value": "5 PM",
+      "enabled": true
+    },
+    {
+      "id": 16,
+      "value": "5:30 PM",
+      "enabled": true
+    },
+    {
+      "id": 17,
+      "value": "6 PM",
+      "enabled": false
+    },
+    {
+      "id": 18,
+      "value": "6:30 PM",
+      "enabled": true
+    },
+    {
+      "id": 19,
+      "value": "7 PM",
+      "enabled": true
+    },
+    {
+      "id": 20,
+      "value": "7:30 PM",
+      "enabled": false
+    },
+    {
+      "id": 21,
+      "value": "8 PM",
+      "enabled": true
+    }
+
+
+  ]
+}
