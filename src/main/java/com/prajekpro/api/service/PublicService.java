@@ -68,6 +68,8 @@ public interface PublicService {
 
     BaseWrapper registerCustomerViaGoogleHandle(GoogleHandleResponseDTO request) throws DuplicateRecordException, ServicesException;
 
+    BaseWrapper registerCustomerViaFacebookHandle(FacebookLoginDTO request) throws DuplicateRecordException, ServicesException;
+
     BaseWrapper getCouponDetails(Long proId, String couponCode) throws ServicesException;
 
     BaseWrapper getStaticContent(StaticContent request) throws ServicesException;

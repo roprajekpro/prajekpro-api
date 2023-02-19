@@ -46,6 +46,8 @@ public class RestUrlConstants {
     //Customer Registration
     public static final String PP_REGISTER = "/register";
     public static final String PP_SOCIAL_HANDLES_GOOGLE_HANDLE = PP_SOCIAL_HANDLES + "/google-handle";
+    public static final String PP_SOCIAL_HANDLES_FACEBOOK_HANDLE = PP_SOCIAL_HANDLES + "/facebook-handle";
+
 
     //Basic Details
     public static final String PP_REGISTER_PRO = "/register/pro";

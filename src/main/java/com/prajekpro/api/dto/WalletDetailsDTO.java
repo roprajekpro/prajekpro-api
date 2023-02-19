@@ -33,7 +33,7 @@ public class WalletDetailsDTO {
         } else {
             this.lockedAmount = 0.0d;
         }
-        this.effectiveBalance = proWalletDetails.getAmount().doubleValue();
+        this.effectiveBalance = proWalletDetails.getAmount().doubleValue()-this.lockedAmount;
 
         log.debug("transactionHistory list is empty or not = {}", walletTransactionHistory.isEmpty());
         for (WalletTransactionHistory transHistory : walletTransactionHistory) {

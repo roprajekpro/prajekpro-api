@@ -58,19 +58,21 @@ public class WalletHelper {
 
     public void releaseApptCommissionAmtToProWallet(AppointmentDetails appointmentDetails) {
         Double apptCommissionAmt = appointmentDetails.getPrajekProLockedAmount();
-
+        if(apptCommissionAmt==null)
+            apptCommissionAmt=0D;
         //Get PRO Wallet details
         ProWalletDetails proWalletDetails = walletDetailsRepository.findByProDetails_IdAndActiveStatus(
                 appointmentDetails.getBookedFor().getId(), ActiveStatus.ACTIVE.value());
         System.out.println("proWalletDetails Booked For - " + appointmentDetails.getBookedFor().getId() + ", proWallet - " + proWalletDetails);
 
         //Relase apptCommissionAmt to wallet
-        Double proWalletAmount = (null == proWalletDetails.getAmount()) ? apptCommissionAmt : (proWalletDetails.getAmount() + apptCommissionAmt);
+        Double proWalletAmount =  proWalletDetails.getAmount() - apptCommissionAmt;
         proWalletDetails.setAmount(proWalletAmount);
 
         //Deduct the relased amount from locked amount
-        Double proWalletLockedAmount = proWalletDetails.getLockedAmount() - apptCommissionAmt;
-        proWalletDetails.setLockedAmount(proWalletLockedAmount);
+        if(proWalletDetails.getLockedAmount()==null)
+            proWalletDetails.setLockedAmount(0.0);
+        proWalletDetails.setLockedAmount(0.0);
 
         walletDetailsRepository.save(proWalletDetails);
 
@@ -175,6 +177,8 @@ public class WalletHelper {
                                                                    int activeStatus) {
         //update wallet details
         ProWalletDetails proWalletDetails = null;
+        if(transactionAmount == null)
+            transactionAmount=0.0;
         if (hasValue(proDetails) && hasValue(proDetails.getId()) && proDetails.getId() > 0l) {
             proWalletDetails = walletDetailsRepository.findByProDetails_IdAndActiveStatus(proDetails.getId(), ActiveStatus.ACTIVE.value());
         }
@@ -207,17 +211,17 @@ public class WalletHelper {
     }
 
     public void deductApptCancellationPenaltyAmtFromProLockedAmt(AppointmentDetails appointmentDetails) {
-        Double cancellationPnltyAmt = appointmentDetails.getCancellationPnltyLockedAmount();
-
+        Double cancellationPnltyAmt = appointmentDetails.getPrajekProLockedAmount();
+        if(cancellationPnltyAmt==null)
+            cancellationPnltyAmt=0D;
         //Get PRO Wallet details
         ProWalletDetails proWalletDetails = walletDetailsRepository.findByProDetails_IdAndActiveStatus(
                 appointmentDetails.getBookedFor().getId(), ActiveStatus.ACTIVE.value());
 
         //Deduct the cancellationPnltyAmt from locked amount
         if (null != proWalletDetails.getLockedAmount()) {
-            Double proWalletLockedAmount = proWalletDetails.getLockedAmount() - cancellationPnltyAmt;
+            Double proWalletLockedAmount = proWalletDetails.getLockedAmount();
             proWalletDetails.setLockedAmount(proWalletLockedAmount);
-
             walletDetailsRepository.save(proWalletDetails);
         }
     }
