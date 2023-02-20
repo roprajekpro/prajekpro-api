@@ -1,48 +1,67 @@
 package com.prajekpro.api.service.impl;
 
-import com.fasterxml.jackson.core.*;
-import com.fasterxml.jackson.databind.*;
-import com.prajekpro.api.constants.*;
-import com.prajekpro.api.converters.*;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.prajekpro.api.constants.RestUrlConstants;
+import com.prajekpro.api.converters.DTOConverter;
 import com.prajekpro.api.domain.*;
 import com.prajekpro.api.dto.*;
 import com.prajekpro.api.enums.*;
 import com.prajekpro.api.repository.*;
 import com.prajekpro.api.service.*;
-import com.prajekpro.api.util.*;
-import com.safalyatech.common.constants.*;
-import com.safalyatech.common.domains.*;
+import com.prajekpro.api.util.EncryptionUtils;
+import com.safalyatech.common.constants.GlobalConstants;
+import com.safalyatech.common.domains.EnquiryDetails;
+import com.safalyatech.common.domains.UserRoleDtl;
+import com.safalyatech.common.domains.UserRolePK;
+import com.safalyatech.common.domains.Users;
 import com.safalyatech.common.dto.*;
-import com.safalyatech.common.enums.*;
-import com.safalyatech.common.exception.*;
-import com.safalyatech.common.repository.*;
-import com.safalyatech.common.utility.*;
-import com.safalyatech.emailUtility.service.*;
-import lombok.extern.slf4j.*;
+import com.safalyatech.common.enums.ActiveStatus;
+import com.safalyatech.common.enums.DownloadSource;
+import com.safalyatech.common.enums.RegistrationSource;
+import com.safalyatech.common.enums.Roles;
+import com.safalyatech.common.exception.DuplicateRecordException;
+import com.safalyatech.common.exception.ServicesException;
+import com.safalyatech.common.repository.EnquiryDetailsRepository;
+import com.safalyatech.common.repository.UserRoleDtlRepository;
+import com.safalyatech.common.repository.UsersRepository;
+import com.safalyatech.common.utility.CheckUtil;
+import com.safalyatech.common.utility.CommonUtility;
+import com.safalyatech.common.utility.PDFUtils;
+import com.safalyatech.common.utility.Pagination;
+import com.safalyatech.emailUtility.service.EmailService;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.math.NumberUtils;
-import org.springframework.beans.factory.annotation.*;
-import org.springframework.core.env.*;
-import org.springframework.core.io.*;
-import org.springframework.data.domain.*;
-import org.springframework.data.domain.Sort.*;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Direction;
+import org.springframework.data.domain.Sort.Order;
 import org.springframework.http.*;
-import org.springframework.security.crypto.password.*;
-import org.springframework.security.oauth2.common.*;
-import org.springframework.stereotype.*;
-import org.springframework.util.*;
-import org.springframework.web.client.*;
-import org.springframework.web.multipart.*;
-import org.springframework.web.servlet.support.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.common.OAuth2AccessToken;
+import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import javax.transaction.*;
-import java.io.*;
-import java.nio.file.*;
-import java.text.*;
+import javax.transaction.Transactional;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.text.MessageFormat;
 import java.util.*;
-import java.util.stream.*;
+import java.util.stream.Collectors;
 
-import static com.safalyatech.common.constants.StringConstants.*;
-import static com.safalyatech.common.utility.CheckUtil.*;
+import static com.safalyatech.common.constants.StringConstants.PP_DEFAULT_IMAGE;
+import static com.safalyatech.common.utility.CheckUtil.hasValue;
 
 @Slf4j
 @Service
@@ -81,6 +100,7 @@ public class PublicServiceImpl implements PublicService {
     private StaticContentRepository staticContentRepository;
 
     @Autowired
+
     private PasswordEncoder passwordEncoder;
     @Autowired
     private FileUploadService fileUploadService;
@@ -89,6 +109,7 @@ public class PublicServiceImpl implements PublicService {
     @Autowired
     private MasterService masterService;
     @Autowired
+
     private UserService userService;
     @Autowired
     private AppointmentService appointmentService;
@@ -133,6 +154,13 @@ public class PublicServiceImpl implements PublicService {
         PPRegisterVO ppRegisterVO = new PPRegisterVO(request);
         registerUser(ppRegisterVO, Roles.ROLE_CUSTOMER.name(), Source.GOOGLE_HANDLE);
 
+        return new BaseWrapper();
+    }
+
+    @Override
+    public BaseWrapper registerCustomerViaFacebookHandle(FacebookLoginDTO request) throws DuplicateRecordException, ServicesException {
+        PPRegisterVO ppRegisterVO = new PPRegisterVO(request);
+        registerUser(ppRegisterVO, Roles.ROLE_CUSTOMER.name(), Source.FACEBOOK_HANDLE);
         return new BaseWrapper();
     }
 
@@ -195,6 +223,8 @@ public class PublicServiceImpl implements PublicService {
 
     private Users registerUser(PPRegisterVO request, String userRole, Source source) throws DuplicateRecordException, ServicesException {
 
+        String handleEncodedPwd= new String();
+        int sourceValue = 0;
         String contactNo = request.getContactNo();
         String emailID = request.getEmailId();
 
@@ -211,32 +241,49 @@ public class PublicServiceImpl implements PublicService {
 
 
             existingUser = userList.get(0);
-
             if (!existingUser.getActiveStatus().equals(ActiveStatus.REGISTRATION_INITIATED.value()) && !userRole.equals(Roles.ROLE_CUSTOMER.name()))
                 //On trying to register with same user, whose registration is not in progress
                 throw new ServicesException(GeneralErrorCodes.ERR_USER_ALREADY_REGISTERED.value());
 
             existingUser.setFirstNm(request.getFirstName());
             existingUser.setLastNm(request.getLastName());
-            if (source == Source.APP)
+            if (source == Source.APP) {
                 existingUser.setPassword(passwordEncoder.encode(request.getPassword()));
-            if (source == Source.GOOGLE_HANDLE)
+                existingUser.setSource(RegistrationSource.APP.value());
+                sourceValue = RegistrationSource.APP.value();
+
+            }
+            if (source == Source.GOOGLE_HANDLE) {
                 existingUser.setGoogleHandlePassword(passwordEncoder.encode(request.getGoogleHandlePassword()));
+                existingUser.setSource(RegistrationSource.GOOGLE.value());
+                handleEncodedPwd = passwordEncoder.encode(request.getGoogleHandlePassword());
+                sourceValue = RegistrationSource.GOOGLE.value();
+            }
+            if(source == Source.FACEBOOK_HANDLE){
+                existingUser.setGoogleHandlePassword(passwordEncoder.encode(request.getFacebookHandlePassword()));
+                existingUser.setSource(RegistrationSource.GOOGLE.value());
+                handleEncodedPwd = passwordEncoder.encode(request.getFacebookHandlePassword());
+                sourceValue = RegistrationSource.FACEBOOK.value();
+            }
+            if(request.getPassword()!=null)
             existingUser.setAccessCode(EncryptionUtils.encrypt(request.getPassword()));
             existingUser.setEmailId(request.getEmailId());
             existingUser.setCntcNo(request.getContactNo());
             existingUser.setLandLineNo(request.getLandlineNo());
-            existingUser.setSource(RegistrationSource.APP.value());
+
             existingUser.setIsContactVerified(request.isContactVerified());
             existingUser.setTncAccepted(request.isTncAccepted());
         }
 
         String firstName = request.getFirstName();
         String lastName = request.getLastName();
+        String encryptedPwd = request.getPassword()!=null ? EncryptionUtils.encrypt(request.getPassword()) :null;
         String appEncodedPwd = source == Source.APP ? passwordEncoder.encode(request.getPassword()) : null;
-        String googleHandleEncodedPwd = source == Source.GOOGLE_HANDLE ? passwordEncoder.encode(request.getGoogleHandlePassword()) : null;
+
+
         boolean isTncAccepted = request.isTncAccepted();
         boolean contactVerified = request.isContactVerified();
+
         log.debug("Contact number= {}", contactNo);
         log.debug("contactVerified = {}", contactVerified);
 
@@ -280,12 +327,12 @@ public class PublicServiceImpl implements PublicService {
                     null,
                     lastName,
                     appEncodedPwd,
-                    googleHandleEncodedPwd,
-                    EncryptionUtils.encrypt(request.getPassword()),
+                    handleEncodedPwd,
+                    encryptedPwd,
                     emailID,
                     contactNo,
                     request.getLandlineNo(),
-                    RegistrationSource.APP.value(),
+                    sourceValue,
                     userRole.equals(Roles.ROLE_VENDOR.name()) ? ActiveStatus.REGISTRATION_INITIATED.value() : ActiveStatus.ACTIVE.value(),
                     0,
                     request.isContactVerified(),
@@ -1180,8 +1227,18 @@ public class PublicServiceImpl implements PublicService {
     @Override
     public BaseWrapper getStaticContent(StaticContent request) throws ServicesException {
         String contentId = request.getContentId();
-        if (hasValue(contentId))
-            return new BaseWrapper(staticContentRepository.findByContentId(contentId));
+        StaticContentDTO staticContentDTO = new StaticContentDTO();
+
+        if (hasValue(contentId)) {
+            StaticContent staticContent=staticContentRepository.findByContentId(contentId);
+            BeanUtils.copyProperties(staticContent,staticContentDTO);
+            if(contentId.equalsIgnoreCase("CUST_BOOK_APPT")) {
+                String message = MessageFormat.format(staticContentDTO.getContent(),
+                        request.getContentValue().get("MIN"), request.getContentValue().get("AMOUNT"));
+                staticContentDTO.setContent(message);
+            }
+            return new BaseWrapper(staticContentDTO);
+        }
         else
             throw new ServicesException(GeneralErrorCodes.ERR_INVALID_DATA_SUPPLIED.value());
     }

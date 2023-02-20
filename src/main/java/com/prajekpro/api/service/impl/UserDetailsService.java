@@ -1,6 +1,5 @@
 package com.prajekpro.api.service.impl;
 
-import com.prajekpro.api.dto.UserDetailsProxy;
 import com.prajekpro.api.enums.GeneralErrorCodes;
 import com.prajekpro.api.enums.Source;
 import com.prajekpro.api.util.CommonUtil;
@@ -54,6 +53,8 @@ public class UserDetailsService implements org.springframework.security.core.use
         //Set Google Handle password as password for Spring Security verification
         System.out.println("username sent = " + username);
         if (userNameSplitString[2].equalsIgnoreCase(Source.GOOGLE_HANDLE.name()))
+            userDetails.setFinalPassword(userDetails.getGoogleHandlePassword());
+        if (userNameSplitString[2].equalsIgnoreCase(Source.FACEBOOK_HANDLE.name()))
             userDetails.setFinalPassword(userDetails.getGoogleHandlePassword());
 
         return userDetails;

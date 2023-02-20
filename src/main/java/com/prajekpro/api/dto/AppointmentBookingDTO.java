@@ -47,6 +47,7 @@ public class AppointmentBookingDTO {
     private Long cancellationFees;
     private String cancellationFeesUnit;
     private Long cancellationFeesUnitId;
+    private String cancellationRemarks;
     private AppointmentInvoiceDTO invoiceDetails;
     private List<AppointmentServicesDTO> appointmentServices;
     private List<AppointmentOtherServicesDTO> appointmentOtherServices = new ArrayList<>();
@@ -60,6 +61,7 @@ public class AppointmentBookingDTO {
     public AppointmentBookingDTO(AppointmentDetails appointmentDetails) {
         this.appointmentState = appointmentDetails.getState();
         this.appointmentDetailsId = appointmentDetails.getId();
+        this.cancellationRemarks = appointmentDetails.getCancelledRemarksDesc();
 
         ProDetails bookedFor = appointmentDetails.getBookedFor();
         this.proId = bookedFor.getId();

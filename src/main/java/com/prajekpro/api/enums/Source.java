@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.Optional;
 
 public enum Source {
-    WEB(1), APP(2), CUSTOMER_APP(3), PRO_APP(4), GOOGLE_HANDLE(5);
+    WEB(1), APP(2), CUSTOMER_APP(3), PRO_APP(4), GOOGLE_HANDLE(5),FACEBOOK_HANDLE(6);
 
     private Integer value;
 
