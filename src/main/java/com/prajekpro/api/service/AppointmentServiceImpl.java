@@ -155,6 +155,9 @@ public class AppointmentServiceImpl implements AppointmentService {
     private String returnUrl;
     @Value("${payments.gcash.dummyCheckoutUrl}")
     private String dummyCheckoutUrl;
+    @Value("${prowallet.locked.amt}")
+    private Double proWalletLockedAmt;
+
 
 
     @Override
@@ -562,7 +565,7 @@ public class AppointmentServiceImpl implements AppointmentService {
                         walletHelper.releaseApptCommissionAmtToProWallet(appointmentDetails);
 
                         //Deduct Appointment cancellation penalty amount from PRO locked amount and add to PrajekPro Wallet
-                        Double apptCancellationPnltyAmt = appointmentDetails.getCancellationPnltyLockedAmount();
+                        Double apptCancellationPnltyAmt = appointmentDetails.getPrajekProLockedAmount();
 
                         //Create an active payment details record for Prajekpro top up with Cancellation Penalty
                         int transactionId = walletHelper.generateTransactionId();
@@ -595,7 +598,9 @@ public class AppointmentServiceImpl implements AppointmentService {
         }
 
         //Once Appt. is confirmed then lock the commission amount of Appointment for pro
-        if (state.name().equals(AppointmentState.CONFIRMED.name())) {
+        // This implemetation flow is disabled for first 6 months.
+
+       /* if (state.name().equals(AppointmentState.CONFIRMED.name())) {
             //Get PRO Wallet details
             ProWalletDetails proWalletDetails = walletDetailsRepository.findByProDetails_IdAndActiveStatus(
                     appointmentDetails.getBookedFor().getId(), ActiveStatus.ACTIVE.value());
@@ -639,6 +644,24 @@ public class AppointmentServiceImpl implements AppointmentService {
 
             appointmentDetails.setCancellationPnltyLockedAmount(cnclPnltyLockedAmount);
             appointmentDetails.setPrajekProLockedAmount(prajekProLockedAmount);
+        }*/
+
+        if (state.name().equals(AppointmentState.CONFIRMED.name())) {
+            //Get PRO Wallet details
+            ProWalletDetails proWalletDetails = walletDetailsRepository.findByProDetails_IdAndActiveStatus(
+                    appointmentDetails.getBookedFor().getId(), ActiveStatus.ACTIVE.value());
+
+
+            Double totalCost = appointmentDetails.getSubTotal();
+            Double serviceLockedAmount = totalCost * (10 / 100f);
+            Double walletAmount = proWalletDetails.getAmount();
+
+            if (walletAmount < serviceLockedAmount)
+                throw new ServicesException(GeneralErrorCodes.ERR_INSUFFICIENT_BALANCE_IN_WALLET.value());
+
+            proWalletDetails.setLockedAmount(serviceLockedAmount);
+            walletDetailsRepository.save(proWalletDetails);
+            appointmentDetails.setPrajekProLockedAmount(serviceLockedAmount);
         }
 
         //Update Appointment State
@@ -652,6 +675,8 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         return new BaseWrapper(appointmentDetails.getId());
     }
+
+
 
     @Async
     private void sendNotificationForAppointmentStatus(AppointmentDetails appointmentDetails, Users customer, Users pro, String appointmentDateTime, Users loggedInUser) throws ParseException {
@@ -867,8 +892,8 @@ public class AppointmentServiceImpl implements AppointmentService {
         Page<AppointmentDetails> confirmedAppointmentPage = null;
         if (hasValue(currentState) && !currentState.isEmpty()) {
             if (!isTermPresent)
-                confirmedAppointmentPage = appointmentDetailsRepository.findByBookedFor_IdAndStateConfirmed(
-                        proId, currentState, currentDate, serviceId, pageable);
+                confirmedAppointmentPage = appointmentDetailsRepository.findByBookedForAndIdAndState(
+                        proId, currentState, currentDate,serviceId, pageable);
             else
                 confirmedAppointmentPage = appointmentDetailsRepository.findByBookedForAndServiceIdAndSearchTerm(
                         proId, currentState, serviceId, currentDate, CommonUtil.getLikeClauseTerm(term), pageable);
@@ -1029,23 +1054,23 @@ public class AppointmentServiceImpl implements AppointmentService {
         appointmentInvoice.setAppointmentDetails(appointmentDetails);
         appointmentInvoiceRepository.save(appointmentInvoice);
 
-        List<String> configName = Arrays.asList(ConfigEnum.APPOINTMENT_PRO_CNCL_PNLTY_PERCENTAGE.name(), ConfigEnum.APPOINTMENT_COMPLETION_PRAJEKPRO_PERCENT.name()
-                , ConfigEnum.WALLET_DEFAULT_LIMIT.name());
-        List<Configuration> configuration = configurationRepository.findByConfigNameIn(configName);
-        Float proPercent = 0.0f;
-        Float prajekProPercent = 0.0f;
-        Float walletDefaultLimit = 0.0f;
-        for (Configuration config : configuration) {
-            if (config.getConfigName().equals(ConfigEnum.APPOINTMENT_PRO_CNCL_PNLTY_PERCENTAGE.name())) {
-                proPercent = Float.valueOf(config.getConfigValue());
-            }
-            if (config.getConfigName().equals(ConfigEnum.APPOINTMENT_COMPLETION_PRAJEKPRO_PERCENT.name())) {
-                prajekProPercent = Float.valueOf(config.getConfigValue());
-            }
-            if (config.getConfigName().equals(ConfigEnum.WALLET_DEFAULT_LIMIT.name())) {
-                walletDefaultLimit = Float.valueOf(config.getConfigValue());
-            }
-        }
+//        List<String> configName = Arrays.asList(ConfigEnum.APPOINTMENT_PRO_CNCL_PNLTY_PERCENTAGE.name(), ConfigEnum.APPOINTMENT_COMPLETION_PRAJEKPRO_PERCENT.name()
+//                , ConfigEnum.WALLET_DEFAULT_LIMIT.name());
+//        List<Configuration> configuration = configurationRepository.findByConfigNameIn(configName);
+//        Float proPercent = 0.0f;
+//        Float prajekProPercent = 0.0f;
+//        Float walletDefaultLimit = 0.0f;
+//        for (Configuration config : configuration) {
+//            if (config.getConfigName().equals(ConfigEnum.APPOINTMENT_PRO_CNCL_PNLTY_PERCENTAGE.name())) {
+//                proPercent = Float.valueOf(config.getConfigValue());
+//            }
+//            if (config.getConfigName().equals(ConfigEnum.APPOINTMENT_COMPLETION_PRAJEKPRO_PERCENT.name())) {
+//                prajekProPercent = Float.valueOf(config.getConfigValue());
+//            }
+//            if (config.getConfigName().equals(ConfigEnum.WALLET_DEFAULT_LIMIT.name())) {
+//                walletDefaultLimit = Float.valueOf(config.getConfigValue());
+//            }
+//        }
 
         //Appointments Other Services
         final int inactiveStatus = ActiveStatus.INACTIVE.value();
@@ -1171,13 +1196,13 @@ public class AppointmentServiceImpl implements AppointmentService {
         appointmentDetails.setSubTotal(totalCost);
 
         //Set Cancellation Pnlty Amt.
-        Double proLockedAmount = totalCost * (proPercent / 100f);
-        appointmentDetails.setCancellationPnltyLockedAmount(proLockedAmount);
+//        Double proLockedAmount = totalCost * (proPercent / 100f);
+//        appointmentDetails.setCancellationPnltyLockedAmount(proLockedAmount);
 
         //Set PrajekPro Commission Amt.
-        Double prePrajekProLockedAmount = appointmentDetails.getPrajekProLockedAmount();
-        Double prajekProLockedAmount = totalCost * (prajekProPercent / 100f);
-        appointmentDetails.setPrajekProLockedAmount(prajekProLockedAmount);
+//        Double prePrajekProLockedAmount = appointmentDetails.getPrajekProLockedAmount();
+//        Double prajekProLockedAmount = totalCost * (prajekProPercent / 100f);
+//        appointmentDetails.setPrajekProLockedAmount(prajekProLockedAmount);
 
         appointmentDetails.setGrandTotal(request.getGrandTotal());
         List<AppointmentTaxDetails> appointmentTaxDetailsList = getAppointmentTaxDetailsList(request.getApplicableTaxes(), appointmentDetails);
@@ -1188,18 +1213,18 @@ public class AppointmentServiceImpl implements AppointmentService {
         //Calculate PRO Wallet locked amt.
         ProWalletDetails proWalletDetails = walletDetailsRepository.findByProDetails_IdAndActiveStatus(proDetails.getId(), ActiveStatus.ACTIVE.value());
         Double walletAmount = proWalletDetails.getAmount();
-        Double preProLockedAmt = appointmentDetails.getCancellationPnltyLockedAmount();
-        walletAmount = walletAmount + preProLockedAmt + prePrajekProLockedAmount;
+        Double preProLockedAmt = appointmentDetails.getPrajekProLockedAmount();
+        //walletAmount = walletAmount + preProLockedAmt;
 
-        Double lockedAmount = totalCost * ((prajekProPercent + proPercent) / 100f);
-        walletAmount = walletAmount - lockedAmount;
+//        Double lockedAmount = totalCost * ((prajekProPercent + proPercent) / 100f);
+//        walletAmount = walletAmount - lockedAmount;
 
         //Check if final wallet amount after all deductions including the locked Amt. is = or > min. allowed threshold value
-        if (walletAmount < walletDefaultLimit)
+        if (walletAmount < preProLockedAmt)
             throw new ServicesException(GeneralErrorCodes.ERR_INSUFFICIENT_BALANCE_IN_WALLET.value());
 
         proWalletDetails.setAmount(walletAmount);
-        proWalletDetails.setLockedAmount(lockedAmount);
+        proWalletDetails.setLockedAmount(0.0);
         walletDetailsRepository.save(proWalletDetails);
 
         return new BaseWrapper(appointmentDetails.getAppointmentInvoice().getId());

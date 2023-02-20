@@ -43,7 +43,7 @@ public class PrajekProWalletDetails extends Auditable implements Serializable {
     public PrajekProWalletDetails(ProDetails proDetails, Double prajekProWalletAmount, WalletAmountType walletAmountType,
                                   Currency currency, WalletTransactionHistory walletTransactionHistory) {
         this.proDetails = proDetails;
-        this.amount = prajekProWalletAmount;
+        this.amount = prajekProWalletAmount!=null?prajekProWalletAmount:0.0;
         this.walletAmountType = walletAmountType;
         this.currency = currency;
         this.walletTransactionHistory = walletTransactionHistory;

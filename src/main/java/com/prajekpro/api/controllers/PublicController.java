@@ -321,6 +321,7 @@ public class PublicController {
     @ApiOperation(value = "Api to get list of Subscription")
     @GetMapping(value = RestUrlConstants.PP_SUBSCRIPTION_MASTER)
     public BaseWrapper getSubscription() {
+
         return subscriptionService.getSubscriptionList();
     }
 
@@ -425,5 +426,21 @@ public class PublicController {
     ) throws ServicesException {
 
         return new BaseWrapper(proServicesService.deleteProServices(proId, serviceId));
+    }
+
+    @ApiOperation(value = "Api to register a customer using facebook social handle")
+    @PostMapping(value = {
+            RestUrlConstants.PP_SOCIAL_HANDLES_FACEBOOK_HANDLE
+    })
+    public BaseWrapper registerCustomerViaFacebook(
+            @RequestBody FacebookLoginDTO request) throws ServicesException, DuplicateRecordException {
+
+        log.info("facebook Handle Registration request parameters = {}", request.toString());
+        publicService.registerCustomerViaFacebookHandle(request);
+
+        return new BaseWrapper(
+                publicService.doLogIn(
+                        request.getEmail().trim(),
+                        request.getId().trim(), Source.CUSTOMER_APP.name().toLowerCase(Locale.ROOT), Source.FACEBOOK_HANDLE));
     }
 }
