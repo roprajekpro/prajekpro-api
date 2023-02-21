@@ -1,16 +1,17 @@
 package com.prajekpro.api.repository;
 
-import com.prajekpro.api.domain.*;
-import com.prajekpro.api.dto.*;
-import com.prajekpro.api.enums.*;
-import com.safalyatech.common.enums.*;
-import org.springframework.data.domain.*;
-import org.springframework.data.jpa.repository.*;
-import org.springframework.data.repository.query.*;
-import org.springframework.stereotype.*;
+import com.prajekpro.api.domain.AppointmentDetails;
+import com.prajekpro.api.enums.AppointmentState;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
-import java.time.*;
-import java.util.*;
+import java.time.LocalDate;
+import java.util.List;
 
 @Repository
 public interface AppointmentDetailsRepository extends JpaRepository<AppointmentDetails, Long>, JpaSpecificationExecutor<AppointmentDetails> {

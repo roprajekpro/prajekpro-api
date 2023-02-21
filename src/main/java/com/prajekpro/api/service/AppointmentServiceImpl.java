@@ -892,7 +892,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         Page<AppointmentDetails> confirmedAppointmentPage = null;
         if (hasValue(currentState) && !currentState.isEmpty()) {
             if (!isTermPresent)
-                confirmedAppointmentPage = appointmentDetailsRepository.findByBookedForAndIdAndState(
+                confirmedAppointmentPage = appointmentDetailsRepository.findByBookedFor_IdAndStateConfirmed(
                         proId, currentState, currentDate,serviceId, pageable);
             else
                 confirmedAppointmentPage = appointmentDetailsRepository.findByBookedForAndServiceIdAndSearchTerm(
